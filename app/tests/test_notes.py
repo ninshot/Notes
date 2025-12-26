@@ -7,18 +7,6 @@ from starlette import status
 from app.main import app
 import app.storage as storage
 
-@pytest.fixture(autouse=True)
-def _isolate_storage():
-    path = "data/notes.json"
-    storage.notes_db.clear()
-    storage.next_id = 1
-
-    storage.DATA_PATH = path
-    storage.save_notes()
-    yield
-
-    storage.next_id = 1
-    storage.notes_db.clear()
 
 def test_create_note():
     client = TestClient(app)
