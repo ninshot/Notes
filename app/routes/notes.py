@@ -1,5 +1,5 @@
 from fastapi import APIRouter,HTTPException, status
-from datetime import datetime
+from datetime import datetime, UTC
 from typing import List
 
 import app.storage as storage
@@ -14,7 +14,7 @@ async def create_note(new_note: NoteCreate):
         id = storage.next_id,
         title = new_note.title,
         content = new_note.content,
-        created_at = datetime.utcnow(),
+        created_at = datetime.now(UTC),
     )
     storage.notes_db[note.id] = note
     storage.next_id +=1

@@ -1,9 +1,9 @@
 from fastapi import APIRouter,HTTPException, status
-from datetime import datetime
+from datetime import datetime,UTC
 from typing import List
 
 import app.storage as storage
-from app.schemas import User, UserCreate
+from app.schemas import User, UserCreate, UserUpdate
 from app.security import create_hashed_password
 
 router = APIRouter(prefix="/users", tags=["users"])
@@ -21,7 +21,7 @@ async def create_user(new_user:UserCreate):
         "email": new_user.email,
         "full_name": new_user.full_name,
         "password_hash": create_hashed_password(new_user.password),
-        "created_at": datetime.utcnow(),
+        "created_at": datetime.now(UTC),
     }
     storage.user_db[user["id"]] = user
     storage.user_id += 1
@@ -56,7 +56,7 @@ async def delete_user(user_id: int):
     return None
 
 @router.patch("/{user_id}", response_model=User, status_code=status.HTTP_200_OK)
-async def update_user(user_id: int, new_user: UserCreate):
+async def update_user(user_id : int, new_user: UserUpdate):
     user = storage.user_db.get(user_id)
 
     if not user:
@@ -65,7 +65,7 @@ async def update_user(user_id: int, new_user: UserCreate):
 
     if new_user.email is None and new_user.full_name is None and new_user.password is None:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT,
-                            detail="Provide atleast one update")
+                            detail="Provide at  least one update")
 
     if new_user.email is not None:
         for user_id, user in storage.user_db.items():

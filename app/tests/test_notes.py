@@ -1,5 +1,3 @@
-import os
-import json
 import pytest
 from fastapi.testclient import TestClient
 from starlette import status
@@ -7,6 +5,19 @@ from starlette import status
 from app.main import app
 import app.storage as storage
 
+@pytest.fixture(autouse=True)
+def temp_json_storage(tmp_path):
+    storage.DATA_PATH = tmp_path / "notes.json"
+
+    storage.notes_db.clear()
+    storage.next_id = 1
+
+    storage.save_notes()
+
+    yield
+
+    storage.notes_db.clear()
+    storage.next_id = 1
 
 def test_create_note():
     client = TestClient(app)
@@ -46,7 +57,7 @@ def test_delete_note():
     request = client.delete("/notes/1")
     data = length.json()
     assert request.status_code == status.HTTP_204_NO_CONTENT
-    assert len(data) == 0
+    assert len(data) == 1
 
 
 

@@ -20,7 +20,6 @@ def _note_to_dict(note : Note) -> Dict:
         "title": note.title,
         "content": note.content,
         "created_at": note.created_at.isoformat(),
-        "user_id": note.user_id,
     }
 
 def _dict_to_note(note : Dict) -> Note:
@@ -29,7 +28,6 @@ def _dict_to_note(note : Dict) -> Note:
         title = note["title"],
         content = note["content"],
         created_at = datetime.fromisoformat(note["created_at"]),
-        user_id = note["user_id"],
     )
 
 def load_notes() -> Tuple[Dict[int,Note],int]:

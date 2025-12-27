@@ -5,7 +5,6 @@ from datetime import datetime
 class NoteCreate(BaseModel):
     title:str = Field(min_length=1,max_length=100)
     content:str = Field(min_length=1,max_length=100)
-    user_id: int
 
 class Note(NoteCreate):
     id: int
@@ -24,8 +23,8 @@ class User(BaseModel):
 
 class UserUpdate(BaseModel):
     email: Optional[EmailStr] = None
-    full_name: Optional[str]
-    password: Optional[str]
+    full_name: Optional[str] = None
+    password: Optional[str] = None
 
 class UserAuth(BaseModel):
     email: EmailStr
