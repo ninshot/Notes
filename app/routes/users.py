@@ -1,10 +1,13 @@
-from fastapi import APIRouter,HTTPException, status
+from fastapi import APIRouter,HTTPException, status, Depends
 from datetime import datetime,timezone
 from typing import List
 
 import app.storage as storage
 from app.schemas.user_schema import User, UserCreate, UserUpdate
 from app.auth.security import create_hashed_password
+from app.database.db import Users
+from app.database.db import Notes, get_async_session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(prefix="/users", tags=["users"])
 
