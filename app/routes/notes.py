@@ -1,5 +1,4 @@
 from fastapi import APIRouter,HTTPException, status, Depends
-from datetime import datetime, timezone
 from typing import List
 from sqlalchemy import select
 from app.schemas.notes_schema import Note, NoteCreate
@@ -15,8 +14,7 @@ async def create_note(
 ):
     new_note = Notes(
         title = new_note.title,
-        content = new_note.content,
-        created_at = datetime.now(timezone.utc)
+        content = new_note.content
     )
 
     session.add(new_note)
