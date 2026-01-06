@@ -1,9 +1,9 @@
 from fastapi import APIRouter,HTTPException, status
-from datetime import datetime, UTC
+from datetime import datetime, timezone
 from typing import List
 
 import app.storage as storage
-from app.schemas import Note, NoteCreate
+from app.schemas.notes_schema import Note, NoteCreate
 
 
 router = APIRouter(prefix='/notes', tags=['notes'])
@@ -14,12 +14,11 @@ async def create_note(new_note: NoteCreate):
         id = storage.next_id,
         title = new_note.title,
         content = new_note.content,
-        created_at = datetime.now(UTC),
+        created_at = datetime.now(timezone.utc),
     )
     storage.notes_db[note.id] = note
     storage.next_id +=1
 
-    storage.save_notes()
     return note
 
 @router.get("", response_model = List[Note], status_code=status.HTTP_200_OK)
@@ -55,7 +54,6 @@ async def update_note(note_id:int, new_note: NoteCreate):
     old_note.title = new_note.title
     old_note.content = new_note.content
     storage.notes_db[note_id] = old_note
-    storage.save_notes()
     return storage.notes_db[note_id]
 
 @router.delete("/{note_id}" , status_code=status.HTTP_204_NO_CONTENT)
@@ -64,8 +62,6 @@ async def delete_note(note_id:int):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                             detail="Note not found")
     del storage.notes_db[note_id]
-
-    storage.save_notes()
     return None
 
 

@@ -1,10 +1,10 @@
 from fastapi import APIRouter,HTTPException, status
-from datetime import datetime,UTC
+from datetime import datetime,timezone
 from typing import List
 
 import app.storage as storage
-from app.schemas import User, UserCreate, UserUpdate
-from app.security import create_hashed_password
+from app.schemas.user_schema import User, UserCreate, UserUpdate
+from app.auth.security import create_hashed_password
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -21,12 +21,11 @@ async def create_user(new_user:UserCreate):
         "email": new_user.email,
         "full_name": new_user.full_name,
         "password_hash": create_hashed_password(new_user.password),
-        "created_at": datetime.now(UTC),
+        "created_at": datetime.now(timezone.utc),
+        "disabled": False,
     }
     storage.user_db[user["id"]] = user
     storage.user_id += 1
-
-    storage.save_users()
 
     return storage.to_public(user)
 
@@ -51,8 +50,6 @@ async def delete_user(user_id: int):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                             detail="User not found")
     del storage.user_db[user_id]
-    storage.save_users()
-
     return None
 
 @router.patch("/{user_id}", response_model=User, status_code=status.HTTP_200_OK)
@@ -82,7 +79,6 @@ async def update_user(user_id : int, new_user: UserUpdate):
         user["password_hash"] = create_hashed_password(new_user.password)
 
     storage.user_db[user_id] = user
-    storage.save_users()
 
     return storage.to_public(user)
 

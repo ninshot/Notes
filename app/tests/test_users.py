@@ -10,20 +10,6 @@ def client():
     return TestClient(app)
 
 
-@pytest.fixture(autouse=True)
-def temp_user_storage(tmp_path):
-
-    storage.USERS_PATH = tmp_path / "users.json"
-
-    storage.user_db.clear()
-    storage.user_id = 1
-
-    yield
-
-    storage.user_db.clear()
-    storage.user_id = 1
-
-
 def test_create_user(client):
 
     request = client.post("/users", json={

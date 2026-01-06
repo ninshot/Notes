@@ -1,14 +1,6 @@
-from pydantic import BaseModel, Field, EmailStr
+from pydantic import BaseModel, EmailStr
 from typing import Optional
 from datetime import datetime
-
-class NoteCreate(BaseModel):
-    title:str = Field(min_length=1,max_length=100)
-    content:str = Field(min_length=1,max_length=100)
-
-class Note(NoteCreate):
-    id: int
-    created_at: datetime
 
 class UserCreate(BaseModel):
     email: EmailStr
@@ -20,16 +12,9 @@ class User(BaseModel):
     email: EmailStr
     full_name: str
     created_at: datetime
+    disabled: bool | None = None
 
 class UserUpdate(BaseModel):
     email: Optional[EmailStr] = None
     full_name: Optional[str] = None
     password: Optional[str] = None
-
-class UserAuth(BaseModel):
-    email: EmailStr
-    password: str
-
-class LoginResponse(BaseModel):
-    message: str
-    user_id: int
