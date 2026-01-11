@@ -1,8 +1,7 @@
 from fastapi import APIRouter,HTTPException, status, Depends
-from datetime import datetime,timezone
 from typing import List
+from sqlalchemy import select
 
-import app.storage as storage
 from app.schemas.user_schema import User, UserCreate, UserUpdate
 from app.auth.security import create_hashed_password
 from app.database.db import Users
@@ -12,78 +11,94 @@ from sqlalchemy.ext.asyncio import AsyncSession
 router = APIRouter(prefix="/users", tags=["users"])
 
 @router.post("", response_model=User, status_code=status.HTTP_201_CREATED)
-async def create_user(new_user:UserCreate):
+async def create_user(new_user:UserCreate, session: AsyncSession = Depends(get_async_session)):
 
-    for exist_user in storage.user_db.values():
-        if exist_user["email"].lower() == new_user.email:
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT,
-                                detail="Email already registered")
+    result = await session.execute(select(Users).where(Users.email == new_user.email))
+    result = result.scalars().one_or_none()
 
-    user = {
-        "id": storage.user_id,
-        "email": new_user.email,
-        "full_name": new_user.full_name,
-        "password_hash": create_hashed_password(new_user.password),
-        "created_at": datetime.now(timezone.utc),
-        "disabled": False,
-    }
-    storage.user_db[user["id"]] = user
-    storage.user_id += 1
+    if result:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail = "Email already registered")
 
-    return storage.to_public(user)
+    password = create_hashed_password(new_user.password)
+
+    user = Users(
+        full_name=new_user.full_name,
+        email=new_user.email,
+        password=password,
+    )
+
+    session.add(user)
+    await session.commit()
+    await session.refresh(user)
+
+    return user
+
 
 @router.get("", response_model=List[User], status_code=status.HTTP_200_OK)
-async def get_all_users():
-    users = storage.user_db.values()
-    return users
+async def get_all_users(session: AsyncSession = Depends(get_async_session)):
+
+    users = await session.execute(select(Users).order_by(Users.created_at.desc()))
+
+    return users.scalars().all()
+
 
 @router.get("/{user_id}", response_model=User, status_code=status.HTTP_200_OK)
-async def get_user(user_id: int):
-    if user_id not in storage.user_db:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                            detail="User not found")
-
-    user = storage.user_db[user_id]
-
-    return storage.to_public(user)
-
-@router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_user(user_id: int):
-    if user_id not in storage.user_db:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                            detail="User not found")
-    del storage.user_db[user_id]
-    return None
-
-@router.patch("/{user_id}", response_model=User, status_code=status.HTTP_200_OK)
-async def update_user(user_id : int, new_user: UserUpdate):
-    user = storage.user_db.get(user_id)
+async def get_user(user_id: int, session: AsyncSession = Depends(get_async_session)):
+    user = await session.execute(select(Users).where(Users.id == user_id))
+    user = user.scalars().first()
 
     if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                            detail="User not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail = "User not found")
+
+    return user
+
+@router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_user(user_id: int , session: AsyncSession = Depends(get_async_session)):
+    user = await session.execute(select(Users).where(Users.id == user_id))
+    user = user.scalars().first()
+
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail="User not found")
+
+    await session.delete(user)
+    await session.commit()
+
+    return
+
+@router.patch("/{user_id}", response_model=User, status_code=status.HTTP_200_OK)
+async def update_user(user_id : int, new_user: UserUpdate, session: AsyncSession = Depends(get_async_session)):
+    user = await session.execute(select(Users).where(Users.id == user_id))
+    user = user.scalars().first()
+
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail="User not found")
 
     if new_user.email is None and new_user.full_name is None and new_user.password is None:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT,
-                            detail="Provide at  least one update")
+                            detail="Provide at least one update")
 
     if new_user.email is not None:
-        for user_id, user in storage.user_db.items():
-            if user["id"] != user_id and user["email"] == new_user.email:
-                raise HTTPException(status_code=status.HTTP_409_CONFLICT,
-                                    detail="Email already registered")
 
-        user["email"] = new_user.email
+        email = await session.execute(select(Users).where(Users.email == new_user.email))
+
+        if not email:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT,detail="Email already registered")
+
+        user.email = new_user.email
+
 
     if new_user.full_name is not None:
-        user["full_name"] = new_user.full_name
+        user.full_name = new_user.full_name
 
     if new_user.password is not None:
-        user["password_hash"] = create_hashed_password(new_user.password)
+        new_password = create_hashed_password(new_user.password)
+        user.password_hash = new_password
 
-    storage.user_db[user_id] = user
+    session.add(user)
+    await session.commit()
+    await session.refresh(user)
 
-    return storage.to_public(user)
+    return user
 
 
 
