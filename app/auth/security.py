@@ -5,9 +5,11 @@ from fastapi import Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer
 from starlette import status
 
+from sqlalchemy import select
+from app.database.db import get_async_session
+from sqlalchemy.ext.asyncio import AsyncSession
 from app.schemas.auth_schema import TokenData
 from .config import ALGORITHM,SECRET_KEY,ACCESS_TOKEN_EXPIRE_MINUTES
-import app.storage as storage
 
 import bcrypt
 import jwt
@@ -23,7 +25,7 @@ def create_hashed_password(password: str) -> str:
     return hashed_password.decode("utf-8")
 
 def verify_password(plain_password, hashed_password):
-    return bcrypt.checkpw(plain_password.encode("utf-8"), hashed_password)
+    return bcrypt.checkpw(plain_password.encode("utf-8"), hashed_password.encode("utf-8"))
 
 def create_access_token(
         data: dict,
@@ -41,7 +43,8 @@ def create_access_token(
 
     return encoded_jwt
 
-async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
+async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)] ,
+                           session: AsyncSession = Depends(get_async_session)):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -49,20 +52,16 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
     )
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        email: str = payload.get("sub")
-        if email is None:
+        email = payload.get("sub")
+        if not email:
             raise credentials_exception
         token_data = TokenData(email=email)
 
     except InvalidTokenError:
         raise credentials_exception
 
-    user = None
-
-    for u in storage.user_db.values():
-        if u["email"] == token_data.email:
-            user = u
-            break
+    user = await session.execute(select(User).where(User.email == token_data.email))
+    user = user.scalar().one_or_none()
 
     if user is None:
         raise credentials_exception
@@ -73,6 +72,7 @@ async def get_current_active_user(current_user: Annotated[User, Depends(get_curr
 
     if current_user.disabled:
         raise HTTPException(status_code=400, detail="Inactive user")
+
     return current_user
 
 

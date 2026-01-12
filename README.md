@@ -1,1 +1,1 @@
-#to:do : integration of user and notes and verification of user and sign in
+#todo: Implementation of relationship between user and notes

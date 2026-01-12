@@ -42,9 +42,9 @@ async def get_all_users(session: AsyncSession = Depends(get_async_session)):
     return users.scalars().all()
 
 
-@router.get("/{user_id}", response_model=User, status_code=status.HTTP_200_OK)
+@router.get("/{user_email}", response_model=User, status_code=status.HTTP_200_OK)
 async def get_user(user_id: int, session: AsyncSession = Depends(get_async_session)):
-    user = await session.execute(select(Users).where(Users.id == user_id))
+    user = await session.execute(select(Users).where(Users.email == user_id))
     user = user.scalars().first()
 
     if not user:
@@ -52,9 +52,9 @@ async def get_user(user_id: int, session: AsyncSession = Depends(get_async_sessi
 
     return user
 
-@router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{user_email}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_user(user_id: int , session: AsyncSession = Depends(get_async_session)):
-    user = await session.execute(select(Users).where(Users.id == user_id))
+    user = await session.execute(select(Users).where(Users.email == user_id))
     user = user.scalars().first()
 
     if not user:
@@ -65,9 +65,9 @@ async def delete_user(user_id: int , session: AsyncSession = Depends(get_async_s
 
     return
 
-@router.patch("/{user_id}", response_model=User, status_code=status.HTTP_200_OK)
+@router.patch("/{user_email}", response_model=User, status_code=status.HTTP_200_OK)
 async def update_user(user_id : int, new_user: UserUpdate, session: AsyncSession = Depends(get_async_session)):
-    user = await session.execute(select(Users).where(Users.id == user_id))
+    user = await session.execute(select(Users).where(Users.email == user_id))
     user = user.scalars().first()
 
     if not user:

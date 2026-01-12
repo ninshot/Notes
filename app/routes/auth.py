@@ -1,20 +1,64 @@
 from fastapi import APIRouter,HTTPException, status
-from app.schemas.auth_schema import UserAuth, LoginResponse
-from app.auth.security import verify_password
+from fastapi.params import Depends
+from typing import Annotated
+
+from app.schemas.auth_schema import Token
+from app.schemas.user_schema import UserCreate, User
+from app.auth.security import verify_password, create_hashed_password, create_access_token
+from fastapi.security.oauth2 import OAuth2PasswordRequestForm
+from app.database.db import Users, get_async_session
+from sqlalchemy import select
+
+from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
-def verify_user(v_user:UserAuth,)-> bool:
-    user = None
-    for u in storage.user_db.values():
-        if u["email"] == v_user.email:
-            user = u
-            break
+async def verify_user(email : str , password : str, session: AsyncSession = Depends(get_async_session)):
+    user = await session.execute(select(Users).where(Users.email == email))
+    user = user.scalars().first()
 
-    if user is None or not verify_password(v_user.password,user["password_hash"]):
-        return False
+    if user is None or not verify_password(password,user.password):
+        return None
 
-    return True
+    return user
+
+@router.post("/login", response_model=Token, status_code=status.HTTP_200_OK)
+async def login_user( form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
+    session: AsyncSession = Depends(get_async_session)):
+
+    user = await verify_user(form_data.username, form_data.password, session)
+
+    if not user:
+        raise HTTPException(status_code=400, detail="Incorrect username or password")
+
+    access_token = create_access_token(data={"sub": user.email})
+    return {"access_token": access_token, "token_type": "bearer"}
+
+@router.post("/register", response_model=User, status_code=status.HTTP_200_OK)
+async def register_user(payload: UserCreate, session: AsyncSession = Depends(get_async_session)):
+    user = await session.execute(select(Users).where(Users.email == payload.email))
+    user = user.scalars().first()
+
+    if user:
+        raise HTTPException(status_code=400, detail="Email already registered")
+
+    password = create_hashed_password(payload.password)
+
+    new_user = Users(
+        full_name=payload.full_name,
+        email = payload.email,
+        password = password,
+    )
+
+    session.add(new_user)
+    await session.commit()
+    await session.refresh(new_user)
+
+    return new_user
+
+
+
+
 
 
 
