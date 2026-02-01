@@ -16,6 +16,7 @@ import jwt
 from jwt.exceptions import InvalidTokenError
 
 from ..schemas.user_schema import User
+from app.database.db import Users
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 
@@ -60,8 +61,8 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)] ,
     except InvalidTokenError:
         raise credentials_exception
 
-    user = await session.execute(select(User).where(User.email == token_data.email))
-    user = user.scalar().one_or_none()
+    user = await session.execute(select(Users).where(Users.email == token_data.email))
+    user = user.scalars().one_or_none()
 
     if user is None:
         raise credentials_exception

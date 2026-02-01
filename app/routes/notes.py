@@ -1,8 +1,9 @@
 from fastapi import APIRouter,HTTPException, status, Depends
-from typing import List
+from typing import List, Annotated
 from sqlalchemy import select
 from app.schemas.notes_schema import Note, NoteCreate
-from app.database.db import Notes, get_async_session
+from app.database.db import Notes, Users, get_async_session
+from app.auth.security import get_current_active_user
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
@@ -10,11 +11,13 @@ router = APIRouter(prefix='/notes', tags=['notes'])
 @router.post("", response_model= Note, status_code=status.HTTP_201_CREATED)
 async def create_note(
         new_note: NoteCreate,
+        current_user: Annotated[Users, Depends(get_current_active_user)],
         session: AsyncSession = Depends(get_async_session),
 ):
     new_note = Notes(
         title = new_note.title,
-        content = new_note.content
+        content = new_note.content,
+        user_id = current_user.id
     )
 
     session.add(new_note)

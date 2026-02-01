@@ -7,7 +7,7 @@ from sqlalchemy import Column, String, ForeignKey, DateTime, Boolean, func, Inte
 from sqlalchemy.dialects.postgresql import UUID
 from datetime import datetime, timezone
 
-DATABASE_URL = "postgresql+asyncpg://postgres:password@localhost:5432/mydb"
+DATABASE_URL = "postgresql+asyncpg://postgres:password@db:5432/mydb"
 
 class Base(DeclarativeBase):
     pass
@@ -17,9 +17,9 @@ class Notes(Base):
     id = Column(Integer, primary_key=True, nullable=False,autoincrement=True,unique=True)
     title = Column(String)
     content = Column(String)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     created_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
-    #user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"))
-    #user = relationship("User", back_populates="notes")
+    user = relationship("Users", back_populates="notes")
 
 class Users(Base):
     __tablename__ = "users"
@@ -30,7 +30,7 @@ class Users(Base):
     password = Column(String,nullable=False)
     disabled = Column(Boolean,nullable=False,default=False)
     created_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
-    #notes = relationship("Notes", back_populates="user")
+    notes = relationship("Notes", back_populates="user")
 
 engine = create_async_engine(DATABASE_URL)
 async_session = async_sessionmaker(engine, expire_on_commit=False)
