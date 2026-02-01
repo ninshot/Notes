@@ -31,6 +31,7 @@ def verify_password(plain_password, hashed_password):
 def create_access_token(
         data: dict,
         expires_delta: timedelta | None = None):
+    
     to_encode = data.copy()
 
     if expires_delta:
