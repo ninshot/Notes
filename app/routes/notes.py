@@ -27,15 +27,21 @@ async def create_note(
 
 @router.get("", response_model= List[Note] , status_code=status.HTTP_200_OK)
 async def get_all_notes(
+        current_user: Annotated[Users, Depends(get_current_active_user)],
         session: AsyncSession = Depends(get_async_session),
 ):
 
-    result = await session.execute(select(Notes).order_by(Notes.id.asc()))
+    result = await session.execute(select(Notes).where(Notes.user_id == current_user.id).order_by(Notes.id.asc()))
 
     return result.scalars().all()
 
 @router.get("/{note_id}" , response_model = Note, status_code=status.HTTP_200_OK)
-async def get_note(note_id:int, session: AsyncSession = Depends(get_async_session)):
+async def get_note(note_id:int, 
+                   current_user: Annotated[Users, Depends(get_current_active_user)],
+                   session: AsyncSession = Depends(get_async_session)):
+    
+    if not current_user:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Register or login to continue")
 
     result = await session.execute(select(Notes).where(Notes.id == note_id))
     note = result.scalars().one_or_none()
@@ -47,8 +53,13 @@ async def get_note(note_id:int, session: AsyncSession = Depends(get_async_sessio
         return note
 
 @router.patch("/{note_id}" , response_model = Note, status_code=status.HTTP_200_OK)
-async def update_note(note_id:int, new_note: NoteCreate , session: AsyncSession = Depends(get_async_session)):
+async def update_note(note_id:int, new_note: NoteCreate ,
+                      current_user: Annotated[Users, Depends(get_current_active_user)], 
+                      session: AsyncSession = Depends(get_async_session)):
 
+    if not current_user:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Register or login to continue")
+    
     if new_note.title is None or new_note.content is None:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Title and content are required")
 
@@ -69,8 +80,13 @@ async def update_note(note_id:int, new_note: NoteCreate , session: AsyncSession 
 
 
 @router.delete("/{note_id}" , status_code=status.HTTP_204_NO_CONTENT)
-async def delete_note(note_id:int, session: AsyncSession = Depends(get_async_session)):
-
+async def delete_note(note_id:int, 
+                      current_user : Annotated[Users, Depends(get_current_active_user)],
+                      session: AsyncSession = Depends(get_async_session)):
+    
+    if not current_user:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Register or login to continue")
+    
     result = await session.get(Notes,note_id)
 
     if result is None:

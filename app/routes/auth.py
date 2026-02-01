@@ -22,7 +22,7 @@ async def verify_user(email : str , password : str, session: AsyncSession = Depe
 
     return user
 
-@router.post("/login", response_model=Token, status_code=status.HTTP_200_OK)
+@router.post("/login", response_model = Token, status_code=status.HTTP_200_OK)
 async def login_user( form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     session: AsyncSession = Depends(get_async_session)):
 
@@ -30,24 +30,36 @@ async def login_user( form_data: Annotated[OAuth2PasswordRequestForm, Depends()]
 
     if not user:
         raise HTTPException(status_code=400, detail="Incorrect username or password")
-
+    
+    if user.disabled:
+        user.disabled = False
+        session.add(user)
+        await session.commit()
+    
     access_token = create_access_token(data={"sub": user.email})
     return {"access_token": access_token, "token_type": "bearer"}
 
-@router.post("/register", response_model=User, status_code=status.HTTP_200_OK)
-async def register_user(payload: UserCreate, session: AsyncSession = Depends(get_async_session)):
-    user = await session.execute(select(Users).where(Users.email == payload.email))
+@router.post("/register", response_model = User, status_code=status.HTTP_200_OK)
+async def register_user(
+    full_name: str,
+    email: str,
+    password: str,
+    session: AsyncSession = Depends(get_async_session)
+):
+    
+    user = await session.execute(select(Users).where(Users.email == email))
+    
     user = user.scalars().first()
 
     if user:
         raise HTTPException(status_code=400, detail="Email already registered")
 
-    password = create_hashed_password(payload.password)
+    password_hashed = create_hashed_password(password)
 
     new_user = Users(
-        full_name=payload.full_name,
-        email = payload.email,
-        password = password,
+        full_name = full_name,
+        email = email,
+        password = password_hashed,
     )
 
     session.add(new_user)
