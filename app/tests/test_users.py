@@ -7,10 +7,10 @@ from starlette import status
 @pytest.mark.asyncio
 async def test_register_user(client):
     
-    response = await client.post("/auth/register", data={
+    response = await client.post("/auth/register", json={
         "email": "test@example.com",
         "password": "1234",
-        "fullname": "Test User"
+        "full_name": "Test User"
         })
     
     assert response.status_code == status.HTTP_200_OK
@@ -23,17 +23,17 @@ async def test_register_user(client):
 @pytest.mark.asyncio
 async def test_register_with_duplicate_email(client):
     # First, register a user
-    await client.post("/auth/register", data={
+    await client.post("/auth/register", json={
         "email": "test@example.com",
         "password": "1234",
-        "fullname": "Test User"
+        "full_name": "Test User"
         })
 
     # Second, attempt to register with the same email
-    response = await client.post("/auth/register", data={
+    response = await client.post("/auth/register", json={
         "email": "test@example.com",
         "password": "1234",
-        "fullname": "Test User"
+        "full_name": "Test User"
         })
     
     assert response.status_code == status.HTTP_400_BAD_REQUEST
@@ -42,10 +42,10 @@ async def test_register_with_duplicate_email(client):
 @pytest.mark.asyncio
 async def test_login_user(client):
     # First, register a user
-    await client.post("/auth/register", data={
+    await client.post("/auth/register", json={
         "email": "test@example.com",
         "password": "1234",
-        "fullname": "Test User"
+        "full_name": "Test User"
         })
 
     # Then, login with the registered user's credentials
@@ -62,10 +62,10 @@ async def test_login_user(client):
 @pytest.mark.asyncio
 async def test_login_user_incorrect_credentials(client):
     # First, register a user
-    await client.post("/auth/register", data={
+    await client.post("/auth/register", json={
         "email": "test@example.com",
         "password": "1234",
-        "fullname": "Test User"
+        "full_name": "Test User"
         })
 
     # Then, attempt to login with incorrect password
