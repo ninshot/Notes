@@ -1,73 +1,81 @@
 import pytest
-from fastapi.testclient import TestClient
 from starlette import status
 
-from app.main import app
-import app.storage as storage
+"""Tests for user registration and login functionality."""
 
-@pytest.fixture(autouse=True)
-def client():
-    return TestClient(app)
+#Test Case 1: User Registration with valid data
+@pytest.mark.asyncio
+async def test_register_user(client):
+    
+    response = await client.post("/auth/register", data={
+        "email": "test@example.com",
+        "password": "1234",
+        "fullname": "Test User"
+        })
+    
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()
+    assert data["email"] == "test@example.com"
+    assert data["full_name"] == "Test User"
+    assert data["id"] is not None
 
+#Test Case 2: User Login with correct credentials
+@pytest.mark.asyncio
+async def test_register_with_duplicate_email(client):
+    # First, register a user
+    await client.post("/auth/register", data={
+        "email": "test@example.com",
+        "password": "1234",
+        "fullname": "Test User"
+        })
 
-def test_create_user(client):
+    # Second, attempt to register with the same email
+    response = await client.post("/auth/register", data={
+        "email": "test@example.com",
+        "password": "1234",
+        "fullname": "Test User"
+        })
+    
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
 
-    request = client.post("/users", json={
-        "email" : "test@email.com",
-        "password" : "test@123",
-        "full_name" : "test",
+#Test Case 3: User Login with correct credentials
+@pytest.mark.asyncio
+async def test_login_user(client):
+    # First, register a user
+    await client.post("/auth/register", data={
+        "email": "test@example.com",
+        "password": "1234",
+        "fullname": "Test User"
+        })
+
+    # Then, login with the registered user's credentials
+    response = await client.post("/auth/login", data={
+        "username": "test@example.com",
+        "password": "1234"
+        })
+    
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()
+    assert data["token_type"] == "bearer"
+
+#Test Case 4: User Login with incorrect credentials
+@pytest.mark.asyncio
+async def test_login_user_incorrect_credentials(client):
+    # First, register a user
+    await client.post("/auth/register", data={
+        "email": "test@example.com",
+        "password": "1234",
+        "fullname": "Test User"
+        })
+
+    # Then, attempt to login with incorrect password
+    response = await client.post("/auth/login", data={
+        "username": "james@email.com",
+        "password": "wrongpassword"
     })
-    assert request.status_code == status.HTTP_201_CREATED
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
 
-    response = request.json()
 
-    assert response["email"] == "test@email.com"
-    assert response["id"] == 1
-    assert response["full_name"] == "test"
 
-def test_get_user(client):
-    request = client.post("/users", json={
-        "email": "test@email.com",
-        "password": "test@123",
-        "full_name": "test",
-    })
-
-    request = client.get("/users/1")
-
-    response = request.json()
-    print(response)
-
-    assert response["email"] == "test@email.com"
-    assert response["id"] == 1
-    assert response["full_name"] == "test"
-
-def test_update_user(client):
-    request = client.post("/users", json={
-        "email": "test@email.com",
-        "password": "test@123",
-        "full_name": "test",
-    })
-
-    request = client.patch("/users/1", json={})
-
-    assert request.status_code == status.HTTP_409_CONFLICT
-
-    request = client.patch("/users/1", json={"email": "update21@email.com", "password": "","full_name": "jacks",})
-    assert request.status_code == status.HTTP_200_OK
-    response = request.json()
-    assert response["email"] == "update21@email.com"
-
-def test_delete_user(client):
-    request = client.post("/users", json={
-        "email": "test@email.com",
-        "password": "test@123",
-        "full_name": "test",
-    })
-
-    request = client.delete("/users/1")
-    assert request.status_code == status.HTTP_204_NO_CONTENT
-
-    request = client.delete("/users/1")
-    assert request.status_code == status.HTTP_404_NOT_FOUND
 
 
