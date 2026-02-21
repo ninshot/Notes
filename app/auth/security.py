@@ -19,15 +19,26 @@ from ..schemas.user_schema import User
 from app.database.db import Users
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
-
+"""
+This fucntion is used for creation of a hashed password using bcrypt library.
+It generates a salt and hashesthe passowrd using the salt and returns the hashed password as a string.
+"""
 def create_hashed_password(password: str) -> str:
     salt = bcrypt.gensalt()
     hashed_password = bcrypt.hashpw(password.encode("utf-8"), salt)
     return hashed_password.decode("utf-8")
-
+"""
+This fucntion is used for verifying the password by comparing
+the plain password with the hashed password using bcrypt library.
+It returns True if the password is correct, otherwise False.
+"""
 def verify_password(plain_password, hashed_password):
     return bcrypt.checkpw(plain_password.encode("utf-8"), hashed_password.encode("utf-8"))
 
+"""
+This fucntion is used for creating a JWT access token. 
+It takes a dictionary of data and an optional expiration time.
+"""
 def create_access_token(
         data: dict,
         expires_delta: timedelta | None = None):
@@ -45,6 +56,10 @@ def create_access_token(
 
     return encoded_jwt
 
+"""
+This async function is used for getting the current user from the JWT token.
+It decodes the token, extracts the email, and retrieves the user from the database.
+"""
 async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)] ,
                            session: AsyncSession = Depends(get_async_session)):
     

@@ -1,3 +1,9 @@
+"""
+This file contains the authentication routes for the application. 
+It includes endpoints for user registration and login, 
+as well as the necessary logic to verify user credentials and generate access tokens. 
+"""
+
 from fastapi import APIRouter,HTTPException, status
 from fastapi.params import Depends
 from typing import Annotated
@@ -12,7 +18,12 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+"""
+    This endpoint verifies the user's email and password, and if valid, generates an access token for the user.
+    It queries the database for the user with the provided email, and if found, 
+    checks if the provided password matches the stored hashed password.
 
+"""
 async def verify_user(email : str , password : str, session: AsyncSession = Depends(get_async_session)):
     user = await session.execute(select(Users).where(Users.email == email))
     user = user.scalars().first()
@@ -22,6 +33,11 @@ async def verify_user(email : str , password : str, session: AsyncSession = Depe
 
     return user
 
+"""
+    This endpoint allows users to log in by providing their email and password.
+    If the credentials are valid, it generates and returns an access token that can be used for
+    authenticated requests to protected endpoints.
+"""
 @router.post("/login", response_model = Token, status_code=status.HTTP_200_OK)
 async def login_user( form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     session: AsyncSession = Depends(get_async_session)):
@@ -39,6 +55,10 @@ async def login_user( form_data: Annotated[OAuth2PasswordRequestForm, Depends()]
     access_token = create_access_token(data={"sub": user.email})
     return {"access_token": access_token, "token_type": "bearer"}
 
+"""
+    This endpoint allows new users to register by providing their full name, email, and password.
+    It checks if the email is already registered, and if not, it creates a new user
+"""
 @router.post("/register", response_model = User, status_code=status.HTTP_200_OK)
 async def register_user(payload: UserCreate, session: AsyncSession = Depends(get_async_session)):
     
