@@ -1,6 +1,9 @@
 # FASTAPI Backend with JWT Authentication, PostgreSQL, Docker, and Isolated Test Environment
 
 This project is a backend service built with **FastAPI**, **PostgreSQL**, **RESTful APIS** and **DOCKER**. It allows users to create notes, delete notes and update notes.
+The appilcation follows modern backend engineering practices including containeraization.
+---
+
 ---
 ## TECH STACK
 
@@ -22,7 +25,9 @@ This project is a backend service built with **FastAPI**, **PostgreSQL**, **REST
 * Docker Compose
 ---
 ## Installation
-To run this service on your machine first you will need to install Docker and do the following steps.
+### Prerequisites
+- Docker
+- Git
 
 1. Clone the repository
    Run `git clone https://github.com/ninshot/Notes.git`
